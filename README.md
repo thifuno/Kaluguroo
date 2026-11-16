@@ -7,6 +7,9 @@
 > **สถานะโปรเจกต์:** Phase 1 (UI, navigation, onboarding) เสร็จสมบูรณ์และรันได้จริง
 > ระบบที่ยังไม่เชื่อมต่อ (Supabase, AI, Google Sign-In) จะแสดงสถานะตามจริง ไม่จำลองผลลัพธ์
 
+**เดโมเว็บ:** https://thifuno.github.io/Kaluguroo/
+**โค้ด:** https://github.com/thifuno/Kaluguroo
+
 ---
 
 ## 1. ฟีเจอร์ที่ใช้งานได้ในเวอร์ชันนี้
