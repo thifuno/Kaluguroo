@@ -1,0 +1,61 @@
+:root {
+  --font-display:
+    Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,
+    Segoe UI Symbol, Noto Color Emoji;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+  --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/*
+ * Web shell (see src/app/_layout.tsx).
+ * The app always fills the browser viewport: no phone-sized frame. Reading
+ * width is capped per screen by <Screen>, and wide windows get a left sidebar
+ * plus multi-column layouts instead of a centered mobile column.
+ * "body ..." raises specificity above react-native-web's atomic classes.
+ */
+body [data-testid='app-root'],
+body [data-testid='app-frame'] {
+  background-color: #faf7f3;
+}
+
+/* Bottom sheets render through a portal on web, so keep them readable and centered. */
+@media (min-width: 720px) {
+  body [data-testid='app-sheet'] {
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto 24px;
+    border-radius: 28px;
+    box-shadow: 0 -12px 40px rgba(58, 42, 32, 0.16);
+  }
+}
+
+/* Keyboard focus is always visible; mouse/touch presses stay clean. */
+body [role='button']:focus-visible,
+body [role='tab']:focus-visible,
+body [role='link']:focus-visible,
+body [tabindex='0']:focus-visible,
+body input:focus-visible,
+body textarea:focus-visible,
+body select:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

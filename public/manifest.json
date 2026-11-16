@@ -1,0 +1,28 @@
+{
+  "name": "Kaluguroo — AI Calorie & Health Tracker",
+  "short_name": "Kaluguroo",
+  "description": "นับแคลอรี่ สแกนอาหารด้วย AI และติดตามสุขภาพในแอปเดียว",
+  "lang": "th",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#FF7043",
+  "background_color": "#FAF7F3",
+  "categories": ["health", "fitness", "food"],
+  "icons": [
+    {
+      "src": "/logo192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

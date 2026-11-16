@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <title>Kaluguroo QA frame</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #d9d2cc;
+        font-family: system-ui, sans-serif;
+      }
+      .bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        background: #2b2622;
+        color: #fff;
+        font-size: 13px;
+        flex-wrap: wrap;
+      }
+      .bar a {
+        color: #ffd3c3;
+        text-decoration: none;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .stage {
+        display: flex;
+        justify-content: center;
+        padding: 12px;
+        overflow: auto;
+      }
+      iframe {
+        flex: none;
+        border: 0;
+        background: #faf7f3;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      QA viewport:
+      <a href="?w=390">390 (phone)</a>
+      <a href="?w=800">800 (tablet)</a>
+      <a href="?w=1280">1280 (desktop)</a>
+      <span id="label"></span>
+    </div>
+    <div class="stage"><iframe id="frame" title="app"></iframe></div>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const width = Number(params.get('w')) || Math.max(window.innerWidth - 24, 320);
+      const height = Number(params.get('h')) || Math.max(window.innerHeight - 72, 480);
+      const route = params.get('route') || '/';
+      const frame = document.getElementById('frame');
+      frame.width = width;
+      frame.height = height;
+      frame.src = route;
+      document.getElementById('label').textContent = width + ' x ' + height + ' ' + route;
+    </script>
+  </body>
+</html>
