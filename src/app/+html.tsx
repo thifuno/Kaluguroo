@@ -6,7 +6,6 @@ import type { PropsWithChildren } from 'react';
 
 const THEME_COLOR = '#FF7043';
 const BACKGROUND_COLOR = '#FAF7F3';
-const BACKDROP_COLOR = '#F1EAE3';
 
 export default function Root({ children }: PropsWithChildren) {
   const { headNodes, bodyNodes, htmlAttributes, bodyAttributes } = useServerDocumentContext();
@@ -27,9 +26,10 @@ export default function Root({ children }: PropsWithChildren) {
         />
         <meta name="theme-color" content={THEME_COLOR} />
 
-        {/* Installable web app (PWA) */}
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        {/* Installable web app (PWA). Relative URLs keep it working under a
+            GitHub Pages project path such as /Kaluguroo/. */}
+        <link rel="manifest" href="manifest.json" />
+        <link rel="apple-touch-icon" href="apple-touch-icon.png" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -49,7 +49,4 @@ export default function Root({ children }: PropsWithChildren) {
 
 const documentStyles = `
   html, body { background-color: ${BACKGROUND_COLOR}; }
-  @media (min-width: 720px) {
-    html, body { background-color: ${BACKDROP_COLOR}; }
-  }
 `;
