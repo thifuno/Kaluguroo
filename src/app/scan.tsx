@@ -72,6 +72,7 @@ export default function ScanScreen() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [facing, setFacing] = useState<CameraType>('back');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [helpVisible, setHelpVisible] = useState(false);
 
   const [analysis, setAnalysis] = useState<FoodAnalysis | null>(null);
@@ -132,6 +133,7 @@ export default function ScanScreen() {
       return;
     }
     setErrorMessage(t(AI_ERROR_KEYS[response.code]));
+    setErrorDetail(response.message);
     setState('error');
   };
 
@@ -425,6 +427,16 @@ export default function ScanScreen() {
               retryLabel={t('common.retry')}
               onRetry={() => void analyze()}
             />
+            {errorDetail ? (
+              <AppText variant="caption" color={palette.textMuted}>
+                {t('scan.errorDetail')}
+              </AppText>
+            ) : null}
+            {errorDetail ? (
+              <AppText variant="caption" color={palette.textMuted}>
+                {errorDetail}
+              </AppText>
+            ) : null}
             <Button label={t('scan.manualEntry')} onPress={goManual} icon="create-outline" />
             <Button label={t('scan.retake')} onPress={retake} variant="secondary" icon="camera-outline" />
           </View>

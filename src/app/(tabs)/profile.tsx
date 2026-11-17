@@ -19,7 +19,7 @@ import { palette, radius, spacing } from '@/constants/theme';
 import { confirmDestructive } from '@/lib/confirm';
 import { formatDateKey } from '@/lib/date';
 import { useResponsive } from '@/lib/responsive';
-import { isAiConfigured } from '@/services/ai/food-analysis';
+import { isAiConfigured, testAiConnection } from '@/services/ai/food-analysis';
 import { isSupabaseConfigured } from '@/services/supabase/client';
 import { useApp } from '@/store/app-provider';
 import { useTextScale } from '@/store/text-scale-provider';
@@ -74,6 +74,23 @@ export default function ProfileScreen() {
     aiProvider === 'gemini'
       ? 'https://aistudio.google.com/app/apikey'
       : 'https://platform.openai.com/api-keys';
+
+  const [aiTest, setAiTest] = useState<
+    { status: 'ok' } | { status: 'error'; message: string } | null
+  >(null);
+  const [aiTesting, setAiTesting] = useState(false);
+
+  const runAiTest = () => {
+    const apiKey = aiKey.trim();
+    if (!apiKey) return;
+    setAiTesting(true);
+    setAiTest(null);
+    void testAiConnection({ provider: aiProvider, apiKey })
+      .then((result) => {
+        setAiTest(result.status === 'ok' ? { status: 'ok' } : { status: 'error', message: result.message });
+      })
+      .finally(() => setAiTesting(false));
+  };
 
   const confirmSignOut = () => {
     void confirmDestructive({
@@ -251,6 +268,41 @@ export default function ProfileScreen() {
             />
           ) : null}
         </View>
+
+        <Button
+          label={aiTesting ? t('profile.aiTesting') : t('profile.aiTest')}
+          onPress={runAiTest}
+          variant="secondary"
+          icon="pulse-outline"
+          loading={aiTesting}
+          disabled={!aiKey.trim() || aiTesting}
+        />
+
+        {aiTest?.status === 'ok' ? (
+          <View style={styles.aiTestRow}>
+            <Ionicons name="checkmark-circle" size={18} color={palette.successText} />
+            <AppText variant="caption" color={palette.successText} style={styles.aiLinkText}>
+              {t('profile.aiTestOk')}
+            </AppText>
+          </View>
+        ) : null}
+
+        {aiTest?.status === 'error' ? (
+          <View style={styles.aiTestBox}>
+            <View style={styles.aiTestRow}>
+              <Ionicons name="alert-circle" size={18} color={palette.dangerText} />
+              <AppText variant="caption" color={palette.dangerText} style={styles.aiLinkText}>
+                {t('profile.aiTestFail')}
+              </AppText>
+            </View>
+            <AppText variant="caption" color={palette.textMuted}>
+              {aiTest.message}
+            </AppText>
+            <AppText variant="caption" color={palette.textMuted}>
+              {t('profile.aiTestHelp')}
+            </AppText>
+          </View>
+        ) : null}
 
         <Pressable
           accessibilityRole="link"
@@ -531,6 +583,13 @@ const styles = StyleSheet.create({
   flexButton: { flexGrow: 1, flexBasis: 140 },
   aiLink: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 44 },
   aiLinkText: { flex: 1 },
+  aiTestRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
+  aiTestBox: {
+    gap: spacing.xs,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: palette.surfaceMuted,
+  },
   aboutCard: { overflow: 'hidden' },
   aboutInner: { paddingHorizontal: spacing.lg },
   toggleRow: {

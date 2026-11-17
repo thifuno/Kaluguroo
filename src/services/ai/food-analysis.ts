@@ -32,6 +32,10 @@ export type FoodAnalysisResponse =
   | { status: 'not_configured' }
   | { status: 'error'; message: string; code: FoodAnalysisErrorCode };
 
+export type AiTestResult =
+  | { status: 'ok' }
+  | { status: 'error'; code: FoodAnalysisErrorCode; message: string };
+
 const ENDPOINT = process.env.EXPO_PUBLIC_AI_API_URL;
 const GEMINI_MODEL = process.env.EXPO_PUBLIC_GEMINI_MODEL || 'gemini-2.5-flash';
 const OPENAI_MODEL = process.env.EXPO_PUBLIC_OPENAI_MODEL || 'gpt-4o-mini';
@@ -208,10 +212,43 @@ function errorCodeForStatus(status: number, detail: string): FoodAnalysisErrorCo
   return 'unknown';
 }
 
+/**
+ * Provider errors sometimes echo (part of) the key. Never show it back.
+ */
+function redactSecrets(text: string): string {
+  return text
+    .replace(/AIza[0-9A-Za-z_-]{10,}/g, 'AIza…')
+    .replace(/sk-[A-Za-z0-9_-]{8,}/g, 'sk-…');
+}
+
+/**
+ * Turns a provider error body into one readable line, for example
+ * "API key not valid. Please pass a valid API key. (API_KEY_INVALID)".
+ */
+function summarizeDetail(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  try {
+    const parsed = JSON.parse(trimmed) as {
+      error?: { message?: string; status?: string; details?: { reason?: string }[] };
+      message?: string;
+    };
+    const error = parsed.error;
+    if (error?.message) {
+      const reason = error.details?.find((item) => item.reason)?.reason;
+      return `${error.message}${reason ? ` (${reason})` : error.status ? ` (${error.status})` : ''}`;
+    }
+    if (typeof parsed.message === 'string') return parsed.message;
+  } catch {
+    // Not JSON: fall back to the raw text.
+  }
+  return trimmed;
+}
+
 async function httpError(response: Response): Promise<FoodAnalysisResponse> {
   let detail = '';
   try {
-    detail = (await response.text()).slice(0, 240);
+    detail = summarizeDetail(redactSecrets((await response.text()).slice(0, 600))).slice(0, 240);
   } catch {
     // The body is optional; the status still tells us what happened.
   }
@@ -382,6 +419,84 @@ export async function analyzeFoodImage(
       code: 'network',
       message: aborted
         ? 'The AI request timed out'
+        : error instanceof Error
+          ? error.message
+          : 'Unknown AI service error',
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Sends a tiny request so the user can verify a saved key before scanning.
+ *
+ * This reports the provider's own reason (redacted) instead of a generic
+ * "invalid key" message, because Google also rejects keys whose project has
+ * the Generative Language API disabled or referrer restrictions.
+ */
+export async function testAiConnection(config: AiSettings): Promise<AiTestResult> {
+  const apiKey = config.apiKey.trim();
+  if (!apiKey) return { status: 'error', code: 'auth', message: 'No API key saved' };
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const isGemini = config.provider === 'gemini';
+    const response = await fetch(
+      isGemini
+        ? `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+        : 'https://api.openai.com/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: isGemini
+          ? {
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey,
+            }
+          : {
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${apiKey}`,
+            },
+        body: JSON.stringify(
+          isGemini
+            ? {
+                contents: [{ role: 'user', parts: [{ text: 'ping' }] }],
+                generationConfig: { maxOutputTokens: 8, temperature: 0 },
+              }
+            : {
+                model: OPENAI_MODEL,
+                messages: [{ role: 'user', content: 'ping' }],
+                max_tokens: 8,
+              },
+        ),
+        signal: controller.signal,
+      },
+    );
+
+    if (response.ok) return { status: 'ok' };
+
+    let detail = '';
+    try {
+      detail = summarizeDetail(redactSecrets((await response.text()).slice(0, 600))).slice(0, 300);
+    } catch {
+      // Keep the status even when the body cannot be read.
+    }
+    return {
+      status: 'error',
+      code: errorCodeForStatus(response.status, detail),
+      message: `HTTP ${response.status}${detail ? ` — ${detail}` : ''}`,
+    };
+  } catch (error) {
+    const aborted = error instanceof Error && error.name === 'AbortError';
+    return {
+      status: 'error',
+      code: 'network',
+      message: aborted
+        ? 'The request timed out'
         : error instanceof Error
           ? error.message
           : 'Unknown AI service error',
