@@ -187,7 +187,10 @@ export default function ScanScreen() {
     );
   }
 
-  if (!permission.granted) {
+  // The permission card only owns the screen while the user is still trying to
+  // use the camera. A photo picked from the gallery must still reach the
+  // preview/analysis flow even when camera access was denied.
+  if (!permission.granted && state === 'camera') {
     return (
       <SafeAreaView style={styles.permissionRoot}>
         <View style={styles.permissionCard}>
@@ -236,8 +239,10 @@ export default function ScanScreen() {
     <View style={styles.root}>
       {photo && state !== 'camera' ? (
         <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} contentFit="cover" />
-      ) : (
+      ) : permission.granted ? (
         <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} />
+      ) : (
+        <View style={styles.cameraPlaceholder} />
       )}
 
       <View style={styles.scrimTop} />
@@ -323,7 +328,7 @@ export default function ScanScreen() {
             <View style={styles.panelHeader}>
               <Badge label={t('scan.imageReady')} tone="success" />
               <AppText variant="caption" align="right" style={styles.panelCaption}>
-                {t('scan.imageReadyBody')}
+                {aiReady ? t('scan.imageReadyAiBody') : t('scan.imageReadyBody')}
               </AppText>
             </View>
 
@@ -501,6 +506,14 @@ export default function ScanScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#111111' },
+  cameraPlaceholder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#111111',
+  },
   permissionRoot: {
     flex: 1,
     backgroundColor: palette.background,
