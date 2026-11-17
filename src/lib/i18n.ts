@@ -401,6 +401,10 @@ const en = {
   'profile.aiTestFail': 'Connection failed. The provider said:',
   'profile.aiTestHelp':
     'If the key looks correct, enable the Generative Language API for that key\'s project and remove API or website restrictions.',
+  'profile.aiKeyShapeGemini':
+    'This key looks incomplete. A Gemini key starts with "AIza" and is 39 characters long — use the copy button in AI Studio.',
+  'profile.aiKeyShapeOpenai':
+    'This key looks incomplete. An OpenAI key starts with "sk-" and is much longer than this.',
   'profile.demoData': 'Developer tools',
   'profile.demoDataDesc': 'Load or clear sample data for development.',
   'profile.loadDemo': 'Load sample data',
@@ -864,6 +868,10 @@ const th: Record<TranslationKey, string> = {
   'profile.aiTestFail': 'เชื่อมต่อไม่สำเร็จ ผู้ให้บริการแจ้งว่า:',
   'profile.aiTestHelp':
     'ถ้าคีย์ถูกต้องแล้ว ให้เปิด Generative Language API ในโปรเจกต์ของคีย์ และปิดการจำกัด API หรือเว็บไซต์ (referrer) ที่ตั้งไว้',
+  'profile.aiKeyShapeGemini':
+    'คีย์นี้ดูเหมือนมาไม่ครบ คีย์ Gemini จะขึ้นต้นด้วย "AIza" และยาว 39 ตัวอักษร — ให้กดปุ่มคัดลอกในเว็บ AI Studio',
+  'profile.aiKeyShapeOpenai':
+    'คีย์นี้ดูเหมือนมาไม่ครบ คีย์ OpenAI จะขึ้นต้นด้วย "sk-" และยาวกว่านี้มาก',
   'profile.demoData': 'เครื่องมือนักพัฒนา',
   'profile.demoDataDesc': 'โหลดหรือล้างข้อมูลตัวอย่างสำหรับการพัฒนา',
   'profile.loadDemo': 'โหลดข้อมูลตัวอย่าง',

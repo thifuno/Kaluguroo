@@ -18,6 +18,7 @@ import { useToast } from '@/components/ui/toast';
 import { palette, radius, spacing } from '@/constants/theme';
 import { confirmDestructive } from '@/lib/confirm';
 import { formatDateKey } from '@/lib/date';
+import type { TranslationKey } from '@/lib/i18n';
 import { useResponsive } from '@/lib/responsive';
 import { isAiConfigured, testAiConnection } from '@/services/ai/food-analysis';
 import { isSupabaseConfigured } from '@/services/supabase/client';
@@ -55,6 +56,16 @@ export default function ProfileScreen() {
   const [aiKeyDraft, setAiKeyDraft] = useState<string | null>(null);
   const aiProvider = aiProviderDraft ?? preferences.ai.provider;
   const aiKey = aiKeyDraft ?? preferences.ai.apiKey;
+
+  const trimmedAiKey = aiKey.trim();
+  const aiKeyShape: TranslationKey | null =
+    trimmedAiKey.length === 0
+      ? null
+      : aiProvider === 'gemini' && !/^AIza[0-9A-Za-z_-]{35}$/.test(trimmedAiKey)
+        ? 'profile.aiKeyShapeGemini'
+        : aiProvider === 'openai' && !/^sk-[A-Za-z0-9_-]{20,}$/.test(trimmedAiKey)
+          ? 'profile.aiKeyShapeOpenai'
+          : null;
 
   const saveAi = () => {
     const apiKey = aiKey.trim();
@@ -250,6 +261,15 @@ export default function ProfileScreen() {
           autoCorrect={false}
           hint={t('profile.aiApiKeyHint')}
         />
+
+        {aiKeyShape ? (
+          <View style={styles.aiTestRow}>
+            <Ionicons name="information-circle" size={18} color={palette.warningText} />
+            <AppText variant="caption" color={palette.warningText} style={styles.aiLinkText}>
+              {t(aiKeyShape)} ({trimmedAiKey.length})
+            </AppText>
+          </View>
+        ) : null}
 
         <View style={styles.aiActions}>
           <Button
