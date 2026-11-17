@@ -100,6 +100,18 @@ export interface Session {
   createdAt: string;
 }
 
+/** Vision provider used for AI food photo analysis. */
+export type AiProvider = 'gemini' | 'openai';
+
+export interface AiSettings {
+  provider: AiProvider;
+  /**
+   * User-supplied provider key. Stored only on this device; an empty string
+   * disables AI scanning. Never ship a provider key inside the repository.
+   */
+  apiKey: string;
+}
+
 export interface UserPreferences {
   notifications: {
     meals: boolean;
@@ -111,6 +123,7 @@ export interface UserPreferences {
     shareHealthData: boolean;
   };
   textSize: TextSize;
+  ai: AiSettings;
   /** First-run 3-step guide on the home screen has been dismissed. */
   tourCompleted: boolean;
 }

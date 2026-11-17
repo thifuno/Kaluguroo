@@ -23,15 +23,27 @@ import { ErrorState } from '@/components/ui/states';
 import { TextField } from '@/components/ui/text-field';
 import { useToast } from '@/components/ui/toast';
 import { palette, radius, spacing } from '@/constants/theme';
+import type { TranslationKey } from '@/lib/i18n';
 import {
   analyzeFoodImage,
   isAiConfigured,
   type FoodAnalysis,
+  type FoodAnalysisErrorCode,
 } from '@/services/ai/food-analysis';
 import { useApp } from '@/store/app-provider';
 import type { FoodItem, MealType } from '@/types/models';
 
 type ScanState = 'camera' | 'preview' | 'analyzing' | 'result' | 'unavailable' | 'error';
+
+const AI_ERROR_KEYS: Record<FoodAnalysisErrorCode, TranslationKey> = {
+  auth: 'scan.aiError.auth',
+  rate_limit: 'scan.aiError.rate_limit',
+  network: 'scan.aiError.network',
+  not_food: 'scan.aiError.not_food',
+  too_large: 'scan.aiError.too_large',
+  invalid: 'scan.aiError.invalid',
+  unknown: 'scan.aiError.unknown',
+};
 
 const MEALS: { value: MealType; labelKey: 'home.breakfast' | 'home.lunch' | 'home.dinner' | 'home.snack' }[] = [
   { value: 'breakfast', labelKey: 'home.breakfast' },
@@ -49,11 +61,12 @@ function defaultMeal(): MealType {
 }
 
 export default function ScanScreen() {
-  const { t, addFoodLog } = useApp();
+  const { t, addFoodLog, preferences } = useApp();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+  const aiReady = isAiConfigured(preferences.ai);
 
   const [state, setState] = useState<ScanState>('camera');
   const [photo, setPhoto] = useState<string | null>(null);
@@ -103,7 +116,7 @@ export default function ScanScreen() {
   const analyze = async () => {
     if (!photo) return;
     setState('analyzing');
-    const response = await analyzeFoodImage(photo);
+    const response = await analyzeFoodImage(photo, preferences.ai);
     if (response.status === 'ok') {
       setAnalysis(response.analysis);
       setEditName(response.analysis.name);
@@ -118,7 +131,7 @@ export default function ScanScreen() {
       setState('unavailable');
       return;
     }
-    setErrorMessage(response.message);
+    setErrorMessage(t(AI_ERROR_KEYS[response.code]));
     setState('error');
   };
 
@@ -150,6 +163,10 @@ export default function ScanScreen() {
   const retake = () => {
     setPhoto(null);
     setState('camera');
+  };
+
+  const goAiSettings = () => {
+    router.replace('/(tabs)/profile');
   };
 
   const helpButton = (
@@ -196,6 +213,12 @@ export default function ScanScreen() {
               }
             }}
             icon="camera"
+          />
+          <Button
+            label={t('scan.pickImage')}
+            onPress={() => void pickImage()}
+            variant="soft"
+            icon="images-outline"
           />
           <Button
             label={t('scan.manualEntry')}
@@ -304,7 +327,7 @@ export default function ScanScreen() {
               </AppText>
             </View>
 
-            {!isAiConfigured() ? (
+            {!aiReady ? (
               <View style={styles.noticeBox}>
                 <Ionicons name="warning-outline" size={22} color={palette.warningText} />
                 <View style={styles.noticeText}>
@@ -316,23 +339,29 @@ export default function ScanScreen() {
               </View>
             ) : null}
 
-            {isAiConfigured() ? (
+            {aiReady ? (
               <Button
                 label={t('scan.analyze')}
                 onPress={() => void analyze()}
                 icon="sparkles"
               />
-            ) : null}
+            ) : (
+              <Button
+                label={t('scan.openAiSettings')}
+                onPress={goAiSettings}
+                icon="settings-outline"
+              />
+            )}
 
             <Button
               label={t('scan.manualEntry')}
               onPress={goManual}
               icon="create-outline"
-              variant={isAiConfigured() ? 'secondary' : 'primary'}
+              variant="secondary"
             />
             <Button label={t('scan.retake')} onPress={retake} variant="ghost" icon="camera-outline" />
 
-            {!isAiConfigured() ? (
+            {!aiReady ? (
               <AppText variant="caption" align="center">
                 {t('scan.notConnectedHint')}
               </AppText>
@@ -366,8 +395,18 @@ export default function ScanScreen() {
               </View>
             </View>
             <AppText variant="body">{t('scan.notConnectedHint')}</AppText>
-            <Button label={t('scan.manualEntry')} onPress={goManual} icon="create-outline" />
-            <Button label={t('scan.retake')} onPress={retake} variant="secondary" icon="camera-outline" />
+            <Button
+              label={t('scan.openAiSettings')}
+              onPress={goAiSettings}
+              icon="settings-outline"
+            />
+            <Button
+              label={t('scan.manualEntry')}
+              onPress={goManual}
+              icon="create-outline"
+              variant="secondary"
+            />
+            <Button label={t('scan.retake')} onPress={retake} variant="ghost" icon="camera-outline" />
           </View>
         </View>
       ) : null}
@@ -377,7 +416,7 @@ export default function ScanScreen() {
           <View style={styles.panel}>
             <ErrorState
               title={t('scan.errorTitle')}
-              body={errorMessage ? `${t('scan.errorBody')} (${errorMessage})` : t('scan.errorBody')}
+              body={errorMessage ?? t('scan.errorBody')}
               retryLabel={t('common.retry')}
               onRetry={() => void analyze()}
             />

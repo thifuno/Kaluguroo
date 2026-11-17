@@ -22,6 +22,7 @@ export const DEFAULT_STATE: AppState = {
     notifications: { meals: true, weekly: true, water: false },
     privacy: { analytics: false, shareHealthData: false },
     textSize: 'normal',
+    ai: { provider: 'gemini', apiKey: '' },
     tourCompleted: false,
   },
   foodLogs: [],
@@ -49,6 +50,7 @@ export async function loadAppState(): Promise<AppState | null> {
           ...parsed.preferences?.notifications,
         },
         privacy: { ...DEFAULT_STATE.preferences.privacy, ...parsed.preferences?.privacy },
+        ai: { ...DEFAULT_STATE.preferences.ai, ...parsed.preferences?.ai },
       },
     };
   } catch (error) {

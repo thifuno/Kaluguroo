@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,7 @@ import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Segmented } from '@/components/ui/segmented';
+import { TextField } from '@/components/ui/text-field';
 import { useToast } from '@/components/ui/toast';
 import { palette, radius, spacing } from '@/constants/theme';
 import { confirmDestructive } from '@/lib/confirm';
@@ -21,7 +23,7 @@ import { isAiConfigured } from '@/services/ai/food-analysis';
 import { isSupabaseConfigured } from '@/services/supabase/client';
 import { useApp } from '@/store/app-provider';
 import { useTextScale } from '@/store/text-scale-provider';
-import type { TextSize } from '@/types/models';
+import type { AiProvider, TextSize } from '@/types/models';
 
 export default function ProfileScreen() {
   const {
@@ -46,6 +48,32 @@ export default function ProfileScreen() {
   const name = profile?.displayName || session?.email.split('@')[0] || t('profile.guest');
   const initial = name.trim().charAt(0).toUpperCase() || 'K';
   const version = Constants.expoConfig?.version ?? '1.0.0';
+  const aiReady = isAiConfigured(preferences.ai);
+
+  // `null` means "show the saved value", so hydration and saves need no effect.
+  const [aiProviderDraft, setAiProviderDraft] = useState<AiProvider | null>(null);
+  const [aiKeyDraft, setAiKeyDraft] = useState<string | null>(null);
+  const aiProvider = aiProviderDraft ?? preferences.ai.provider;
+  const aiKey = aiKeyDraft ?? preferences.ai.apiKey;
+
+  const saveAi = () => {
+    const apiKey = aiKey.trim();
+    updatePreferences({ ai: { provider: aiProvider, apiKey } });
+    setAiProviderDraft(null);
+    setAiKeyDraft(null);
+    toast(apiKey ? t('profile.aiSaved') : t('profile.aiCleared'), 'success');
+  };
+
+  const clearAi = () => {
+    setAiKeyDraft(null);
+    updatePreferences({ ai: { provider: aiProvider, apiKey: '' } });
+    toast(t('profile.aiCleared'), 'info');
+  };
+
+  const keyUrl =
+    aiProvider === 'gemini'
+      ? 'https://aistudio.google.com/app/apikey'
+      : 'https://platform.openai.com/api-keys';
 
   const confirmSignOut = () => {
     void confirmDestructive({
@@ -173,6 +201,77 @@ export default function ProfileScreen() {
 
   const settingsColumn = (
     <>
+      <SectionHeader title={t('profile.aiSection')} />
+      <Card style={styles.aiCard}>
+        <View style={styles.aiHeader}>
+          <View style={styles.aiHeaderText}>
+            <AppText variant="bodyStrong">{t('profile.aiTitle')}</AppText>
+            <AppText variant="caption">{t('profile.aiDesc')}</AppText>
+          </View>
+          <Badge
+            label={aiReady ? t('profile.configured') : t('profile.notConfigured')}
+            tone={aiReady ? 'success' : 'warning'}
+          />
+        </View>
+
+        <Segmented
+          value={aiProvider}
+          onChange={setAiProviderDraft}
+          options={[
+            { value: 'gemini', label: t('profile.aiProviderGemini') },
+            { value: 'openai', label: t('profile.aiProviderOpenai') },
+          ]}
+        />
+
+        <TextField
+          label={t('profile.aiApiKey')}
+          value={aiKey}
+          onChangeText={setAiKeyDraft}
+          placeholder={aiProvider === 'gemini' ? 'AIza...' : 'sk-...'}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+          hint={t('profile.aiApiKeyHint')}
+        />
+
+        <View style={styles.aiActions}>
+          <Button
+            label={t('profile.aiSave')}
+            onPress={saveAi}
+            icon="checkmark-circle-outline"
+            style={styles.flexButton}
+          />
+          {preferences.ai.apiKey ? (
+            <Button
+              label={t('profile.aiClear')}
+              onPress={clearAi}
+              variant="secondary"
+              icon="trash-outline"
+              style={styles.flexButton}
+            />
+          ) : null}
+        </View>
+
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel={
+            aiProvider === 'gemini'
+              ? t('profile.aiGetKeyGemini')
+              : t('profile.aiGetKeyOpenai')
+          }
+          onPress={() => void Linking.openURL(keyUrl)}
+          style={({ pressed }) => [styles.aiLink, pressed && { opacity: 0.7 }]}>
+          <Ionicons name="open-outline" size={16} color={palette.primaryPressed} />
+          <AppText variant="caption" color={palette.primaryPressed} style={styles.aiLinkText}>
+            {aiProvider === 'gemini'
+              ? t('profile.aiGetKeyGemini')
+              : t('profile.aiGetKeyOpenai')}
+          </AppText>
+        </Pressable>
+
+        <AppText variant="caption">{t('profile.aiPrivacy')}</AppText>
+      </Card>
+
       <SectionHeader title={t('profile.notifications')} />
       <Card>
         <ToggleRow
@@ -234,11 +333,17 @@ export default function ProfileScreen() {
           <ListRow
             icon="sparkles-outline"
             title={t('profile.aiStatus')}
-            subtitle={t('scan.notConnectedTitle')}
+            subtitle={
+              aiReady
+                ? preferences.ai.provider === 'gemini'
+                  ? t('profile.aiProviderGemini')
+                  : t('profile.aiProviderOpenai')
+                : t('scan.notConnectedTitle')
+            }
             right={
               <Badge
-                label={isAiConfigured() ? t('profile.configured') : t('profile.notConfigured')}
-                tone={isAiConfigured() ? 'success' : 'warning'}
+                label={aiReady ? t('profile.configured') : t('profile.notConfigured')}
+                tone={aiReady ? 'success' : 'warning'}
               />
             }
           />
@@ -419,6 +524,13 @@ const styles = StyleSheet.create({
   textSizeCard: { gap: spacing.md },
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   previewText: { flex: 1 },
+  aiCard: { gap: spacing.md },
+  aiHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  aiHeaderText: { flex: 1, gap: 2 },
+  aiActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  flexButton: { flexGrow: 1, flexBasis: 140 },
+  aiLink: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 44 },
+  aiLinkText: { flex: 1 },
   aboutCard: { overflow: 'hidden' },
   aboutInner: { paddingHorizontal: spacing.lg },
   toggleRow: {

@@ -324,6 +324,7 @@ export function AppProvider({ children }: PropsWithChildren) {
           ...patchPreferences.notifications,
         },
         privacy: { ...current.preferences.privacy, ...patchPreferences.privacy },
+        ai: { ...current.preferences.ai, ...patchPreferences.ai },
       },
     }));
   }, []);

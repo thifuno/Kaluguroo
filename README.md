@@ -5,7 +5,8 @@
 ดีไซน์โทนส้มอบอุ่น ภาษาไทยเป็นค่าเริ่มต้น และสลับเป็นอังกฤษได้
 
 > **สถานะโปรเจกต์:** Phase 1 (UI, navigation, onboarding) เสร็จสมบูรณ์และรันได้จริง
-> ระบบที่ยังไม่เชื่อมต่อ (Supabase, AI, Google Sign-In) จะแสดงสถานะตามจริง ไม่จำลองผลลัพธ์
+> AI สแกนอาหารใช้งานได้เมื่อผู้ใช้ใส่ API key ของตัวเอง (Gemini/OpenAI) — ถ้ายังไม่ใส่จะแจ้งตามจริง ไม่จำลองผลลัพธ์
+> ส่วนที่ยังไม่เชื่อมต่อ: Supabase และ Google Sign-In
 
 **เดโมเว็บ:** https://thifuno.github.io/Kaluguroo/
 **โค้ด:** https://github.com/thifuno/Kaluguroo
@@ -29,7 +30,7 @@
 | ปรับขนาดตัวอักษร 3 ระดับ + ปุ่มช่วยเหลือ/ทัวร์ใช้งานครั้งแรก | ✅ |
 | Responsive: มือถือ / แท็บเล็ต / เดสก์ท็อป (390–1280px) | ✅ |
 | เว็บแอป (PWA): ใช้ได้บนเบราว์เซอร์ + ติดตั้งเป็นแอป + build เป็น static | ✅ |
-| AI food scanner (กล้อง + แกลเลอรี) | ⚠️ UI พร้อม แต่ต้องตั้งค่า endpoint |
+| AI food scanner (กล้อง + แกลเลอรี) | ✅ วิเคราะห์จริงด้วย Gemini/OpenAI เมื่อใส่ API key ในโปรไฟล์ |
 | Supabase Auth + Cloud sync | ⏳ Phase 2 (มี schema + client พร้อม) |
 | Google Sign-In | ⏳ แสดงข้อความ "ยังไม่เชื่อมต่อ" อย่างชัดเจน |
 | บันทึกกิจกรรม/น้ำหนักย้อนหลังแบบเต็มรูปแบบ | ⏳ Phase 4 |
@@ -113,10 +114,21 @@ git remote add origin https://github.com/<username>/<repo>.git
 git push -u origin main
 ```
 
-ถ้าใช้ **GitHub Pages แบบ project site** (`https://<username>.github.io/<repo>/`) ต้องตั้ง
-`expo.experiments.baseUrl` เป็น `"/<repo>"` ใน `app.json` ก่อน build ไม่งั้นไฟล์ JS/CSS จะ 404
-(ถ้าใช้ repo ชื่อ `<username>.github.io` หรือ custom domain ที่ root ไม่ต้องตั้ง)
-หรือ deploy ผ่าน Netlify/Vercel ที่ publish โฟลเดอร์ `dist` ได้ทันที
+เว็บเดโมนี้ deploy อัตโนมัติด้วย **GitHub Actions** ทุกครั้งที่ push ขึ้น `main`:
+
+- `.github/workflows/deploy.yml` → ติดตั้ง dependencies, `expo export -p web`, อัปโหลด artifact และ deploy ขึ้น Pages
+- `app.config.js` → อ่านชื่อ repository แล้วตั้ง `experiments.baseUrl` เป็น `/<repo>` ให้เอง
+  (เครื่อง local ไม่ตั้ง baseUrl จึงเปิดที่ root ได้ตามปกติ)
+- ตั้งค่า Pages ให้ใช้ **Source: GitHub Actions** (ไม่ใช่ branch `gh-pages`)
+
+ถ้าต้องการ build เองบนเครื่อง:
+
+```bash
+EXPO_BASE_URL=/<repo> npx expo export -p web
+```
+
+แล้วเอาโฟลเดอร์ `dist` ไปวางบน Netlify/Vercel/GitHub Pages ได้เลย
+ถ้าใช้ repo ชื่อ `<username>.github.io` หรือ custom domain ที่ root ไม่ต้องตั้ง `EXPO_BASE_URL`
 
 ### ลองใช้งานเร็ว ๆ
 
@@ -274,10 +286,29 @@ Copy-Item scripts/qa-frame.html dist/qa.html
 | บัญชีผู้ใช้ | mock auth + AsyncStorage | Supabase Auth (+ Google OAuth) |
 | ฐานข้อมูลอาหาร | 30 รายการใน `constants/foods.ts` | ตาราง `food_items` + ค้นหาเต็มรูปแบบ |
 | ไดอารี่/น้ำหนัก/กิจกรรม | state ในเครื่อง + persist | ตาราง `food_logs`, `weight_logs`, `activity_logs` |
-| AI scan | เรียก `EXPO_PUBLIC_AI_API_URL` ถ้ามี | Edge Function + provider จริง |
+| AI scan | Gemini หรือ OpenAI ตรงจากผู้ใช้ (ใส่ key ในแอป) หรือ `EXPO_PUBLIC_AI_API_URL` | Edge Function + provider จริง |
 | การแจ้งเตือน | เก็บ preference เท่านั้น | `expo-notifications` + push token |
 
 ### เปิดใช้งาน AI จริง
+
+มีสองวิธี เลือกวิธีใดวิธีหนึ่ง
+
+**วิธีที่ 1 — ใส่ API key ในแอป (แนะนำสำหรับเดโม)**
+
+1. ขอคีย์ฟรีที่ [Google AI Studio](https://aistudio.google.com/app/apikey) (Gemini) หรือ
+   [OpenAI Platform](https://platform.openai.com/api-keys)
+2. เปิดแอป → **โปรไฟล์ → สแกนอาหารด้วย AI**
+3. เลือกผู้ให้บริการ วางคีย์ แล้วกด **บันทึกคีย์**
+4. กลับไปที่หน้าสแกน จะเห็นปุ่ม **วิเคราะห์ด้วย AI**
+
+คีย์ถูกเก็บไว้ในเครื่อง/เบราว์เซอร์ของผู้ใช้เท่านั้น (AsyncStorage) และส่งตรงไปยังผู้ให้บริการ
+**ห้ามใส่คีย์ลงใน repository หรือ commit ไฟล์ `.env`** — โค้ดใน repo ไม่มีคีย์ใด ๆ ทั้งสิ้น
+ถ้าใช้เว็บเดโม public ควรจำกัด quota ของคีย์หรือลบคีย์ทิ้งเมื่อเลิกใช้
+
+> การเรียกจากเบราว์เซอร์ตรงไปยัง Gemini/OpenAI ต้องให้ผู้ให้บริการอนุญาต CORS
+> ทั้งสองเจ้ารองรับอยู่แล้ว แต่คีย์จะอยู่ในเบราว์เซอร์ของผู้ใช้ ซึ่งยอมรับได้เฉพาะกรณีที่ผู้ใช้กรอกเอง
+
+**วิธีที่ 2 — ใช้ backend proxy (แนะนำสำหรับ production)**
 
 1. Deploy `supabase/functions/analyze-food` (ดู `supabase/README.md`)
 2. ตั้งค่าใน `.env`
@@ -286,8 +317,8 @@ Copy-Item scripts/qa-frame.html dist/qa.html
 EXPO_PUBLIC_AI_API_URL=https://<project>.supabase.co/functions/v1/analyze-food
 ```
 
-ถ้าไม่ตั้งค่า ปุ่มวิเคราะห์จะไม่ทำงาน และ UI จะแจ้งว่า **“AI service is not connected”**
-พร้อมทางเลือก “บันทึกเอง” — ไม่มีการสร้างผลลัพธ์ขึ้นเอง
+ถ้าไม่มีทั้งคีย์และ endpoint ปุ่มวิเคราะห์จะไม่ทำงาน และ UI จะแจ้งว่า **“ยังไม่ได้เชื่อมต่อ AI”**
+พร้อมทางเลือก “ตั้งค่า AI” และ “บันทึกเอง” — ไม่มีการสร้างผลลัพธ์ขึ้นเอง
 
 ### เปิดใช้งาน Supabase
 
